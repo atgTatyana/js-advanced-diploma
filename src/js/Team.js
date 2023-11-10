@@ -1,3 +1,4 @@
+import GameState from './GameState';
 /**
  * Класс, представляющий персонажей команды
  *
@@ -13,4 +14,20 @@
  * */
 export default class Team {
   // TODO: write your logic here
+  constructor(characters) {
+    this.characters = characters;
+  }
+
+  static forTeam(posChar) {
+    const team = [];
+    const pos = [];
+    let character;
+
+    for (let i = 0; i < posChar.length; i += 1) {
+      character = GameState.from(posChar[i].character);
+      team.push(character);
+      pos.push(posChar[i].position);
+    }
+    return [team, pos];
+  }
 }
