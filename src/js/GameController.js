@@ -10,8 +10,8 @@ export default class GameController {
   constructor(gamePlay, stateService) {
     this.gamePlay = gamePlay;
     this.stateService = stateService;
-    this.types1 = ['Bowman', 'Swordsman', 'Magician'];
-    this.types2 = ['Vampire', 'Undead', 'Daemon'];
+    this.playerTypes = ['Bowman', 'Swordsman', 'Magician'];
+    this.pcTypes = ['Vampire', 'Undead', 'Daemon'];
   }
 
   init() {
@@ -44,49 +44,61 @@ export default class GameController {
 
   onNewGame() {
     this.currentScore = 0;
-    this.positions1 = [];
+    this.playerPositions = [];
     this.gameEnd();
     this.addListener();
     this.newGame(1);
   }
 
   onSaveGame() {
-    this.gameState.posChar1 = this.posCharacters1;
-    this.gameState.posChar2 = this.posCharacters2;
-    this.gameState.currentScore = this.currentScore;
-    this.gameState.positions1 = this.positions1;
-    this.gameState.positions2 = this.positions2;
-
-    this.stateService.save(this.gameState);
+    if (this.playerPositions) {
+      const state = GameState.configure(
+        this.playerPositionedCharacters,
+        this.pcPositionedCharacters,
+        this.currentScore,
+        this.playerPositions,
+        this.pcPositions,
+        this.gameState.level,
+      );
+      this.stateService.save(state);
+    }
   }
 
   onLoadGame() {
     try {
       this.state = this.stateService.load();
+      if (this.state) {
+        this.gameEnd();
+        this.movePositions = [];
+
+        this.playerPositions = this.state.playerPositions;
+        this.pcPositions = this.state.pcPositions;
+        this.currentScore = this.state.currentScore;
+
+        const { playerPositionedCharacters, pcPositionedCharacters } = this.state;
+        const playerTeam = Team.forTeam(playerPositionedCharacters);
+        const pcTeam = Team.forTeam(pcPositionedCharacters);
+
+        this.playerPositionedCharacters = this.getTeamPositionedCharacters(
+          new Team(playerTeam[0]),
+          playerTeam[1],
+        );
+        this.pcPositionedCharacters = this.getTeamPositionedCharacters(
+          new Team(pcTeam[0]),
+          pcTeam[1],
+        );
+        this.positionedCharacters = [
+          ...this.playerPositionedCharacters,
+          ...this.pcPositionedCharacters,
+        ];
+
+        this.draw();
+        if (this.pcPositions.length !== 0) {
+          this.addListener();
+        }
+      }
     } catch (e) {
       GamePlay.showError('Ошибка загрузки state!');
-    }
-
-    if (this.state) {
-      this.gameEnd();
-      this.movePositions = [];
-
-      this.positions1 = this.state.positions1;
-      this.positions2 = this.state.positions2;
-      this.currentScore = this.state.currentScore;
-
-      const { posChar1, posChar2 } = this.state;
-      const team1 = Team.forTeam(posChar1);
-      const team2 = Team.forTeam(posChar2);
-
-      this.posCharacters1 = this.getTeamPositionedCharacters(new Team(team1[0]), team1[1]);
-      this.posCharacters2 = this.getTeamPositionedCharacters(new Team(team2[0]), team2[1]);
-      this.positionedCharacters = [...this.posCharacters1, ...this.posCharacters2];
-
-      this.draw();
-      if (this.positions2.length !== 0) {
-        this.addListener();
-      }
     }
 
     if (this.state === null) {
@@ -140,24 +152,34 @@ export default class GameController {
     }
   }
 
-  getTeams(maxLevel, charCount) {
+  getTeams(maxLevel, characterCount) {
     this.prevCharacters = [];
-    if (this.positions1 && this.positions1.length > 0) {
-      this.prevCharacters = this.posCharacters1;
+    if (this.playerPositions && this.playerPositions.length > 0) {
+      this.prevCharacters = this.playerPositionedCharacters;
     }
 
-    this.positions1 = this.getTeamPositions(this.gamePlay.team1Positions, charCount);
-    this.positions2 = this.getTeamPositions(this.gamePlay.team2Positions, charCount);
-    const team2 = generateTeam(this.types2, maxLevel, charCount);
+    this.playerPositions = this.getTeamPositions(this.gamePlay.playerTeamPositions, characterCount);
+    this.pcPositions = this.getTeamPositions(this.gamePlay.pcTeamPositions, characterCount);
+    const pcTeam = generateTeam(this.pcTypes, maxLevel, characterCount);
+    const playerTeam = generateTeam(
+      this.playerTypes,
+      maxLevel,
+      characterCount - this.prevCharacters.length,
+    );
 
-    const team1 = generateTeam(this.types1, maxLevel, charCount - this.prevCharacters.length);
     this.prevCharacters.forEach((el) => {
-      team1.characters.push(el.character);
+      playerTeam.characters.push(el.character);
     });
 
-    this.posCharacters1 = this.getTeamPositionedCharacters(team1, this.positions1);
-    this.posCharacters2 = this.getTeamPositionedCharacters(team2, this.positions2);
-    this.positionedCharacters = [...this.posCharacters1, ...this.posCharacters2];
+    this.playerPositionedCharacters = this.getTeamPositionedCharacters(
+      playerTeam,
+      this.playerPositions,
+    );
+    this.pcPositionedCharacters = this.getTeamPositionedCharacters(pcTeam, this.pcPositions);
+    this.positionedCharacters = [
+      ...this.playerPositionedCharacters,
+      ...this.pcPositionedCharacters,
+    ];
   }
 
   getTeamPositions(allPositions, playerCount) {
@@ -179,7 +201,8 @@ export default class GameController {
   onCellClick(index) {
     // TODO: react to click
     if (this.activeCharacter) {
-      const newActiveCharacter = this.posCharacters1.find((el) => el.position === index);
+      const newActiveCharacter = this.playerPositionedCharacters
+        .find((el) => el.position === index);
       if (newActiveCharacter) {
         if (newActiveCharacter !== this.activeCharacter) {
           this.getNewActiveCharacter(index, newActiveCharacter);
@@ -187,10 +210,10 @@ export default class GameController {
         return;
       }
 
-      if (this.positions2.includes(index) && this.attackPositions.includes(index)) {
+      if (this.pcPositions.includes(index) && this.attackPositions.includes(index)) {
         console.log('attack! ', index);
         this.damage(index);
-      } else if (this.movePositions.includes(index) && !this.positions2.includes(index)) {
+      } else if (this.movePositions.includes(index) && !this.pcPositions.includes(index)) {
         console.log('move! ', index);
         this.move(index);
       } else {
@@ -213,24 +236,24 @@ export default class GameController {
     const oldActiveCharacter = this.activeCharacter;
     this.activeCharacter = null;
 
-    this.gameState.changeIsPlayer1();
-    if (!this.gameState.isPlayer1) {
-      this.player2(oldActiveCharacter);
+    this.gameState.changeIsPlayer();
+    if (!this.gameState.isPlayer) {
+      this.pcMove(oldActiveCharacter);
     }
   }
 
   getActiveCharacter(index) {
-    this.activeCharacter = this.posCharacters1.find((el) => el.position === index);
+    this.activeCharacter = this.playerPositionedCharacters.find((el) => el.position === index);
     if (this.activeCharacter) {
       this.getDisplay(index);
     } else {
-      GamePlay.showError('Выберите, пожалуйста, своего персонажа!');
+      GamePlay.showError('Выберите другого персонажа!');
     }
   }
 
   getDisplay(index) {
     this.gamePlay.selectCell(index);
-    const otherCharacters = this.posCharacters1.filter((el) => el.position !== index);
+    const otherCharacters = this.playerPositionedCharacters.filter((el) => el.position !== index);
     otherCharacters.forEach((el) => {
       this.gamePlay.cells[el.position].style.cursor = cursors.pointer;
     });
@@ -245,7 +268,7 @@ export default class GameController {
       this.gamePlay.cells[cell].style.border = '1px solid yellow';
     });
 
-    this.posCharacters2.forEach((el) => {
+    this.pcPositionedCharacters.forEach((el) => {
       if (this.attackPositions.includes(el.position)) {
         this.gamePlay.cells[el.position].style.cursor = cursors.crosshair;
       } else {
@@ -274,12 +297,12 @@ export default class GameController {
   getRanges() {
     const { type } = this.activeCharacter.character;
     const { position } = this.activeCharacter;
-    this.cellsPositions = new Set(this.getRange1(position));
+    this.cellsPositions = new Set(this.getRange1Cell(position));
 
     if (type === 'bowman' || type === 'vampire') {
-      const cell2 = new Set(this.centers);
-      cell2.delete(null);
-      this.getRange2(cell2);
+      const centers = new Set(this.centers);
+      centers.delete(null);
+      this.getRange2Cell(centers);
       this.cellsPositions.delete(position);
       this.attackPositions = [...this.cellsPositions];
       this.movePositions = [...this.cellsPositions];
@@ -295,18 +318,18 @@ export default class GameController {
       this.movePositions = [...this.cellsPositions];
     }
 
-    const cell2 = new Set(this.centers);
-    cell2.delete(null);
-    const cell3 = new Set();
-    this.getRange3(cell2, cell3);
-    cell3.delete(position);
-    cell3.delete(null);
+    const centers = new Set(this.centers);
+    centers.delete(null);
+    const centersNext = new Set();
+    this.getRange3Cell(centers, centersNext);
+    centersNext.delete(position);
+    centersNext.delete(null);
 
-    const cell4 = new Set();
-    this.getRange3(cell3, cell4);
-    cell4.delete(null);
+    const centersLast = new Set();
+    this.getRange3Cell(centersNext, centersLast);
+    centersLast.delete(null);
 
-    this.getRange2(cell4);
+    this.getRange2Cell(centersLast);
     this.cellsPositions.delete(position);
 
     if (type === 'swordsman' || type === 'undead') {
@@ -320,9 +343,9 @@ export default class GameController {
     this.deletePosition();
   }
 
-  getRange1(position) {
+  getRange1Cell(position) {
     const { boardSize } = this.gamePlay;
-    const arr = [];
+    const range1Cell = [];
     this.centers = [];
     let top = false;
     let bottom = false;
@@ -333,62 +356,62 @@ export default class GameController {
     let bottomRight = null;
 
     if (position - boardSize >= 0) {
-      arr.push(position - boardSize);
+      range1Cell.push(position - boardSize);
       top = true;
     }
 
     if (position % boardSize !== 0) {
-      arr.push(position - 1);
+      range1Cell.push(position - 1);
       if (top) {
         topLeft = position - boardSize - 1;
-        arr.push(topLeft);
+        range1Cell.push(topLeft);
       }
       left = true;
     }
 
     if (position + boardSize < boardSize ** 2) {
-      arr.push(position + boardSize);
+      range1Cell.push(position + boardSize);
       if (left) {
         bottomLeft = position + boardSize - 1;
-        arr.push(bottomLeft);
+        range1Cell.push(bottomLeft);
       }
       bottom = true;
     }
 
     if ((position + 1) % boardSize !== 0) {
-      arr.push(position + 1);
+      range1Cell.push(position + 1);
       if (bottom) {
         bottomRight = position + boardSize + 1;
-        arr.push(bottomRight);
+        range1Cell.push(bottomRight);
       }
       if (top) {
         topRight = position - boardSize + 1;
-        arr.push(topRight);
+        range1Cell.push(topRight);
       }
     }
 
     this.centers = [topLeft, topRight, bottomLeft, bottomRight];
-    return arr;
+    return range1Cell;
   }
 
-  getRange2(centers) {
+  getRange2Cell(centers) {
     centers.forEach((el) => {
-      const arr = this.getRange1(el, this.gamePlay.boardSize);
-      arr.forEach((ar) => this.cellsPositions.add(ar));
+      const range = this.getRange1Cell(el);
+      range.forEach((cell) => this.cellsPositions.add(cell));
     });
   }
 
-  getRange3(centers1, centers2) {
-    centers1.forEach((el) => {
-      const arr = this.getRange1(el, this.gamePlay.boardSize);
-      arr.forEach((ar) => this.cellsPositions.add(ar));
-      this.centers.forEach((center) => { centers2.add(center); });
+  getRange3Cell(centers, centersNext) {
+    centers.forEach((el) => {
+      const range = this.getRange1Cell(el);
+      range.forEach((cell) => this.cellsPositions.add(cell));
+      this.centers.forEach((center) => { centersNext.add(center); });
     });
   }
 
   onCellEnter(index) {
     // TODO: react to mouse enter
-    if (this.positions1.includes(index) || this.positions2.includes(index)) {
+    if (this.playerPositions.includes(index) || this.pcPositions.includes(index)) {
       const characterInfo = this.getCharacterInfo(index);
       this.gamePlay.showCellTooltip(characterInfo, index);
     } else if (this.movePositions && this.movePositions.includes(index)) {
@@ -396,7 +419,7 @@ export default class GameController {
     }
 
     if (this.attackPositions && this.attackPositions.includes(index)
-      && this.positions2.includes(index)) {
+      && this.pcPositions.includes(index)) {
       this.gamePlay.selectCell(index, 'red');
     }
   }
@@ -416,129 +439,133 @@ export default class GameController {
     }
   }
 
-  player2(oldActiveCharacter) {
-    const attack1 = [];
-    const attack2 = [];
+  pcMove(oldActiveCharacter) {
+    const charactersToAttackTheAttacker = [];
+    const charactersToAttack = [];
 
     if (this.target) {
       this.newAttack = oldActiveCharacter.position;
     }
 
-    for (let i = 0; i < this.posCharacters2.length; i += 1) {
-      this.activeCharacter = this.posCharacters2[i];
+    for (let i = 0; i < this.pcPositionedCharacters.length; i += 1) {
+      this.activeCharacter = this.pcPositionedCharacters[i];
       this.getRanges();
 
       if (this.target && this.attackPositions.includes(this.newAttack)) {
-        attack1.push(this.posCharacters2[i]);
+        charactersToAttackTheAttacker.push(this.pcPositionedCharacters[i]);
       } else {
-        this.positions1.forEach((position) => {
+        this.playerPositions.forEach((position) => {
           if (this.attackPositions.includes(position)) {
-            attack2.push({
+            charactersToAttack.push({
               target: position,
-              char: this.posCharacters2[i],
+              char: this.pcPositionedCharacters[i],
             });
           }
         });
       }
     }
 
-    if (attack1.length) {
-      attack1.sort((a, b) => b.character.attack - a.character.attack);
-      console.log('Атакует напавшего персонажа!');
-      this.damage(oldActiveCharacter, attack1[0].character);
+    // ПК атакует напавшего персонажа с наибольшим уроном
+    if (charactersToAttackTheAttacker.length) {
+      charactersToAttackTheAttacker.sort((a, b) => b.character.attack - a.character.attack);
+      this.damage(oldActiveCharacter, charactersToAttackTheAttacker[0].character);
       this.target = null;
       return;
     }
 
-    if (attack2.length) {
-      attack2.sort((a, b) => b.char.character.attack - a.char.character.attack);
-      const target = this.posCharacters1.find((el) => el.position === attack2[0].target);
-      this.damage(target, attack2[0].char.character);
+    // ПК атакует персонажа, доступного для атаки, с наибольшим уроном
+    if (charactersToAttack.length) {
+      charactersToAttack.sort((a, b) => b.char.character.attack - a.char.character.attack);
+      const target = this.playerPositionedCharacters
+        .find((el) => el.position === charactersToAttack[0].target);
+      this.damage(target, charactersToAttack[0].char.character);
       this.target = null;
       return;
     }
 
-    const moveChar = this.choiceMoveCharacter();
-    this.choiceMovePosition(...moveChar);
+    const moveCharacter = this.pcChoiceMoveCharacter();
+    this.pcChoiceMovePosition(...moveCharacter);
   }
 
   deletePosition() {
-    const positions = [...this.positions1, ...this.positions2];
+    const positions = [...this.playerPositions, ...this.pcPositions];
     positions.forEach((position) => {
       this.movePositions = this.movePositions.filter((pos) => pos !== position);
     });
 
-    if (this.gameState.isPlayer1) {
-      this.positions1.forEach((position) => {
+    if (this.gameState.isPlayer) {
+      this.playerPositions.forEach((position) => {
         this.attackPositions = this.attackPositions.filter((pos) => pos !== position);
       });
     } else {
-      this.positions2.forEach((position) => {
+      this.pcPositions.forEach((position) => {
         this.attackPositions = this.attackPositions.filter((pos) => pos !== position);
       });
     }
   }
 
-  choiceMoveCharacter() {
+  pcChoiceMoveCharacter() {
     // Будет ходить персонаж, который ближе всего к противнику
-    const arr = [];
-    for (let i = 0; i < this.positions1.length; i += 1) {
-      const col = this.positions1[i] % this.gamePlay.boardSize;
-      const row = Math.floor(this.positions1[i] / this.gamePlay.boardSize);
-      arr[i] = [col, row];
+    const playerColRow = [];
+    for (let i = 0; i < this.playerPositions.length; i += 1) {
+      const col = this.playerPositions[i] % this.gamePlay.boardSize;
+      const row = Math.floor(this.playerPositions[i] / this.gamePlay.boardSize);
+      playerColRow[i] = [col, row];
     }
 
-    const arr1 = [];
-    for (let i = 0; i < this.positions2.length; i += 1) {
-      const col = this.positions2[i] % this.gamePlay.boardSize;
-      const row = Math.floor(this.positions2[i] / this.gamePlay.boardSize);
-      for (let j = 0; j < arr.length; j += 1) {
-        const x = col - arr[j][0] < 0 ? -(col - arr[j][0]) : col - arr[j][0];
-        const y = row - arr[j][1] < 0 ? -(row - arr[j][1]) : row - arr[j][1];
-        arr1.push([this.positions2[i], this.positions1[j], arr[j], x + y]);
+    const distance = [];
+    for (let i = 0; i < this.pcPositions.length; i += 1) {
+      const col = this.pcPositions[i] % this.gamePlay.boardSize;
+      const row = Math.floor(this.pcPositions[i] / this.gamePlay.boardSize);
+      for (let j = 0; j < playerColRow.length; j += 1) {
+        const x = col - playerColRow[j][0] < 0
+          ? -(col - playerColRow[j][0]) : col - playerColRow[j][0];
+        const y = row - playerColRow[j][1] < 0
+          ? -(row - playerColRow[j][1]) : row - playerColRow[j][1];
+        distance.push([this.pcPositions[i], this.playerPositions[j], playerColRow[j], x + y]);
       }
     }
 
-    arr1.sort((a, b) => a[3] - b[3]);
-    return arr1[0];
+    distance.sort((a, b) => a[3] - b[3]);
+    return distance[0];
   }
 
-  choiceMovePosition(moveChar, target, arr) {
+  pcChoiceMovePosition(moveCharacter, target, playerColRow) {
     // Выбирается позиция ближайшая к противнику
-    this.activeCharacter = this.posCharacters2.find((el) => el.position === moveChar);
+    this.activeCharacter = this.pcPositionedCharacters.find((el) => el.position === moveCharacter);
     this.getRanges();
 
-    const arr1 = [];
-    let arr2 = [];
-    const arr3 = [];
+    const distanceCol = [];
+    let distanceColMin = [];
+    const distanceRow = [];
     this.movePositions.forEach((el) => {
       const col = el % this.gamePlay.boardSize;
-      const x = col - arr[0] < 0 ? -(col - arr[0]) : col - arr[0];
-      arr1.push([el, x]);
+      const distCol = col - playerColRow[0] < 0 ? -(col - playerColRow[0]) : col - playerColRow[0];
+      distanceCol.push([el, distCol]);
     });
-    arr1.sort((a, b) => a[1] - b[1]);
-    arr2 = arr1.filter((el) => el[1] === arr1[0][1]);
+    distanceCol.sort((a, b) => a[1] - b[1]);
+    distanceColMin = distanceCol.filter((el) => el[1] === distanceCol[0][1]);
 
-    arr2.forEach((el) => {
+    distanceColMin.forEach((el) => {
       const row = Math.floor(el[0] / this.gamePlay.boardSize);
-      const y = row - arr[1] < 0 ? -(row - arr[1]) : row - arr[1];
-      arr3.push([el[0], y]);
+      const distRow = row - playerColRow[1] < 0 ? -(row - playerColRow[1]) : row - playerColRow[1];
+      distanceRow.push([el[0], distRow]);
     });
-    arr3.sort((a, b) => a[1] - b[1]);
+    distanceRow.sort((a, b) => a[1] - b[1]);
 
-    this.move(arr3[0][0]);
+    this.move(distanceRow[0][0]);
   }
 
   damage(index, attacker = this.activeCharacter.character) {
     const { attack } = attacker;
-    if (this.gameState.isPlayer1) {
-      this.target = this.posCharacters2.find((el) => el.position === index);
+    if (this.gameState.isPlayer) {
+      this.target = this.pcPositionedCharacters.find((el) => el.position === index);
     } else {
       this.target = index;
     }
 
     const damage = Math.round(Math.max(attack - this.target.character.defence, attack * 0.1));
-    if (this.gameState.isPlayer1) {
+    if (this.gameState.isPlayer) {
       this.gamePlay.showDamage(index, damage);
     } else {
       this.gamePlay.showDamage(index.position, damage);
@@ -547,13 +574,13 @@ export default class GameController {
     this.target.character.health -= damage;
 
     if (this.target.character.health <= 0) {
-      if (this.positions1.includes(this.target.position)) {
-        this.positions1 = this.positions1.filter((el) => el !== this.target.position);
-        this.posCharacters1 = this.posCharacters1
+      if (this.playerPositions.includes(this.target.position)) {
+        this.playerPositions = this.playerPositions.filter((el) => el !== this.target.position);
+        this.playerPositionedCharacters = this.playerPositionedCharacters
           .filter((el) => el.position !== this.target.position);
       } else {
-        this.positions2 = this.positions2.filter((el) => el !== this.target.position);
-        this.posCharacters2 = this.posCharacters2
+        this.pcPositions = this.pcPositions.filter((el) => el !== this.target.position);
+        this.pcPositionedCharacters = this.pcPositionedCharacters
           .filter((el) => el.position !== this.target.position);
         this.currentScore += 10;
       }
@@ -564,7 +591,7 @@ export default class GameController {
 
     setTimeout(() => {
       this.gamePlay.redrawPositions(this.positionedCharacters);
-      if (this.positions2.length === 0) {
+      if (this.pcPositions.length === 0) {
         if (this.gameState.level === 4) {
           console.log('ПОБЕДА!');
           this.deleteDisplay();
@@ -572,13 +599,13 @@ export default class GameController {
           return;
         }
 
-        this.posCharacters1.forEach((el) => {
+        this.playerPositionedCharacters.forEach((el) => {
           el.character.levelUp();
           el.character.up();
         });
 
         this.newGame(this.gameState.level + 1);
-      } else if (this.positions1.length === 0) {
+      } else if (this.playerPositions.length === 0) {
         console.log('Вы проиграли!');
         this.gameEnd();
       } else {
@@ -590,17 +617,31 @@ export default class GameController {
   move(index) {
     const { position } = this.activeCharacter;
     const oldPosition = position;
-    if (this.gameState.isPlayer1) {
-      this.positions1.splice(this.positions1.indexOf(position), 1, index);
-      const movedPosition = this.posCharacters1.indexOf(this.activeCharacter);
-      this.posCharacters1[movedPosition].position = index;
-    } else {
-      this.positions2.splice(this.positions2.indexOf(position), 1, index);
-      const movedPosition = this.posCharacters2.indexOf(this.activeCharacter);
-      this.posCharacters2[movedPosition].position = index;
-    }
 
-    this.positionedCharacters = [...this.posCharacters1, ...this.posCharacters2];
+    const moveIndex = (positions, positionedCharacters) => {
+      positions.splice(positions.indexOf(position), 1, index);
+      const movedPosition = positionedCharacters.indexOf(this.activeCharacter);
+      positionedCharacters[movedPosition].position = index;
+    };
+    if (this.gameState.isPlayer) {
+      moveIndex(this.playerPositions, this.playerPositionedCharacters);
+    } else {
+      moveIndex(this.pcPositions, this.pcPositionedCharacters);
+    }
+    // if (this.gameState.isPlayer) {
+    //   this.playerPositions.splice(this.playerPositions.indexOf(position), 1, index);
+    //   const movedPosition = this.playerPositionedCharacters.indexOf(this.activeCharacter);
+    //   this.playerPositionedCharacters[movedPosition].position = index;
+    // } else {
+    //   this.pcPositions.splice(this.pcPositions.indexOf(position), 1, index);
+    //   const movedPosition = this.pcPositionedCharacters.indexOf(this.activeCharacter);
+    //   this.pcPositionedCharacters[movedPosition].position = index;
+    // }
+
+    this.positionedCharacters = [
+      ...this.playerPositionedCharacters,
+      ...this.pcPositionedCharacters,
+    ];
     this.gamePlay.redrawPositions(this.positionedCharacters);
     this.changePlayer(oldPosition);
   }

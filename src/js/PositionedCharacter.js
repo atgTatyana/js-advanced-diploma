@@ -14,7 +14,7 @@ export default class PositionedCharacter {
     this.position = position;
   }
 
-  static getPositionsTeam1(boardSize) {
+  static getPlayerTeamPositions(boardSize) {
     let pos = 0;
     const positions = [0, 1];
     for (let i = 0; i < boardSize - 1; i += 1) {
@@ -25,7 +25,7 @@ export default class PositionedCharacter {
     return positions;
   }
 
-  static getPositionsTeam2(boardSize) {
+  static getPcTeamPositions(boardSize) {
     let pos = boardSize - 2;
     const positions = [pos, pos + 1];
     for (let i = 0; i < boardSize - 1; i += 1) {

@@ -48,6 +48,7 @@ body {
 
 .cell {
   position: relative;
+  box-sizing: border-box;
 }
 
 .cell.selected::before {

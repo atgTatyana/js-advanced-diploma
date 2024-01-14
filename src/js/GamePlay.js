@@ -4,8 +4,8 @@ import PositionedCharacter from './PositionedCharacter';
 export default class GamePlay {
   constructor() {
     this.boardSize = 8;
-    this.team1Positions = PositionedCharacter.getPositionsTeam1(this.boardSize);
-    this.team2Positions = PositionedCharacter.getPositionsTeam2(this.boardSize);
+    this.playerTeamPositions = PositionedCharacter.getPlayerTeamPositions(this.boardSize);
+    this.pcTeamPositions = PositionedCharacter.getPcTeamPositions(this.boardSize);
     this.container = null;
     this.boardEl = null;
     this.cells = [];

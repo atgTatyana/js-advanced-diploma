@@ -64,21 +64,8 @@ export function generateTeam(allowedTypes, maxLevel, characterCount) {
   for (let i = 0; i < characterCount; i += 1) {
     characters[i] = playerGenerator.next().value;
 
-    switch (characters[i].level) {
-      case 2:
-        characters[i].up();
-        break;
-      case 3:
-        characters[i].up();
-        characters[i].up();
-        break;
-      case 4:
-        characters[i].up();
-        characters[i].up();
-        characters[i].up();
-        break;
-      default:
-        break;
+    for (let j = 1; j < characters[i].level; j += 1) {
+      characters[i].up();
     }
   }
 

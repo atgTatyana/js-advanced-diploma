@@ -7,16 +7,34 @@ import Vampire from './characters/Vampire';
 
 export default class GameState {
   constructor(level) {
-    this.isPlayer1 = true;
+    this.isPlayer = true;
     this.level = level;
   }
 
-  changeIsPlayer1() {
-    this.isPlayer1 = !this.isPlayer1;
+  changeIsPlayer() {
+    this.isPlayer = !this.isPlayer;
+  }
+
+  static configure(
+    playerPositionedCharacters,
+    pcPositionedCharacters,
+    currentScore,
+    playerPositions,
+    pcPositions,
+    level,
+  ) {
+    // TODO: create object
+    return {
+      playerPositionedCharacters,
+      pcPositionedCharacters,
+      currentScore,
+      playerPositions,
+      pcPositions,
+      level,
+    };
   }
 
   static from(char) {
-    // TODO: create object
     let character;
     switch (char.type) {
       case 'bowman':

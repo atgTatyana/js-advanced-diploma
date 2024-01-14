@@ -23,23 +23,21 @@ export default class Character {
       throw new Error('Уровень персонажа должен быть от 1 до 4!');
     }
 
-    const types = ['swordsman', 'bowman', 'magician', 'daemon', 'undead', 'vampire'];
-    if (!types.includes(type)) {
-      const typesString = types.join(', ');
-      throw new Error(`Разрешенные персонажи: ${typesString}`);
-    }
-
     this.level = level;
     this.health = 50;
     this.type = type;
+  }
+
+  propertyUp(property) {
+    return Math.round(Math.max(property, property * ((80 + this.health) / 100)));
   }
 
   up() {
     if (this.health <= 0) {
       throw new Error('Нельзя повысить уровень умершего!');
     }
-    this.attack = Math.round(Math.max(this.attack, this.attack * ((80 + this.health) / 100)));
-    this.defence = Math.round(Math.max(this.defence, this.defence * ((80 + this.health) / 100)));
+    this.attack = this.propertyUp(this.attack);
+    this.defence = this.propertyUp(this.defence);
     this.health = this.health + 80 > 100 ? 100 : this.health + 80;
   }
 

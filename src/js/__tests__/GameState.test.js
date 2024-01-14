@@ -18,16 +18,11 @@ beforeEach(() => {
 });
 
 test('testing function load with error', () => {
-  // stateService.load.mockReturnValue(new Error('Invalid state'));
-  stateService.load.mockReturnValue(undefined);
-  GamePlay.showError.mockReturnValue('showError');
-  const result = GamePlay.showError();
+  stateService.load.mockReturnValue(new Error('Invalid state'));
   gameCtrl.onLoadGame();
 
-  expect(result).toBe('showError');
   expect(GamePlay.showError).toHaveBeenCalled();
   expect(stateService.load).toHaveBeenCalled();
-  expect(gameCtrl.state).toBeUndefined();
 });
 
 test('testing function load', () => {
