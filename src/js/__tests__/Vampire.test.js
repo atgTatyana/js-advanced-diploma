@@ -21,9 +21,9 @@ test('testing class Vampire', () => {
 const gamePlay = new GamePlay();
 const gameCtrl = new GameController(gamePlay);
 gameCtrl.gameState = new GameState(1);
-gameCtrl.positions2 = [0, 1, 9];
-gameCtrl.positions1 = [6, 7, 14];
-gameCtrl.gameState.isPlayer1 = true;
+gameCtrl.pcPositions = [0, 1, 9];
+gameCtrl.playerPositions = [6, 7, 14];
+gameCtrl.gameState.isPlayer = true;
 
 test('testing vampire attack and move', () => {
   const vampire = new Vampire(1);

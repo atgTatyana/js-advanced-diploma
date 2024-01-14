@@ -31,9 +31,9 @@ test('testing function load', () => {
 
   stateService.load.mockReturnValue({
     currentScore: 20,
-    isPlayer1: true,
+    isPlayer: true,
     level: 2,
-    posChar1: [
+    playerPositionedCharacters: [
       {
         character: {
           level: 2, health: 100, type: 'bowman', attack: 33, defence: 33,
@@ -53,7 +53,7 @@ test('testing function load', () => {
         position: 24,
       },
     ],
-    posChar2: [
+    pcPositionedCharacters: [
       {
         character: {
           level: 2, health: 100, type: 'vampire', attack: 33, defence: 33,
@@ -73,8 +73,8 @@ test('testing function load', () => {
         position: 38,
       },
     ],
-    positions1: [8, 17, 24],
-    positions2: [14, 55, 38],
+    playerPositions: [8, 17, 24],
+    pcPositions: [14, 55, 38],
   });
 
   gameCtrl.onLoadGame();
@@ -84,9 +84,9 @@ test('testing function load', () => {
 
   expect(gameCtrl.state).toEqual({
     currentScore: 20,
-    isPlayer1: true,
+    isPlayer: true,
     level: 2,
-    posChar1: [
+    playerPositionedCharacters: [
       {
         character: {
           level: 2, health: 100, type: 'bowman', attack: 33, defence: 33,
@@ -106,7 +106,7 @@ test('testing function load', () => {
         position: 24,
       },
     ],
-    posChar2: [
+    pcPositionedCharacters: [
       {
         character: {
           level: 2, health: 100, type: 'vampire', attack: 33, defence: 33,
@@ -126,7 +126,7 @@ test('testing function load', () => {
         position: 38,
       },
     ],
-    positions1: [8, 17, 24],
-    positions2: [14, 55, 38],
+    playerPositions: [8, 17, 24],
+    pcPositions: [14, 55, 38],
   });
 });

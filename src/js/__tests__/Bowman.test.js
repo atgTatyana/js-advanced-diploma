@@ -21,9 +21,9 @@ test('testing class Bowman', () => {
 const gamePlay = new GamePlay();
 const gameCtrl = new GameController(gamePlay);
 gameCtrl.gameState = new GameState(1);
-gameCtrl.positions1 = [0, 1, 9];
-gameCtrl.positions2 = [6, 7, 14];
-gameCtrl.gameState.isPlayer1 = true;
+gameCtrl.playerPositions = [0, 1, 9];
+gameCtrl.pcPositions = [6, 7, 14];
+gameCtrl.gameState.isPlayer = true;
 
 test('testing bowman attack and move', () => {
   const bowman = new Bowman(1);

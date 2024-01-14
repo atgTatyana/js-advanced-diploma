@@ -21,9 +21,9 @@ test('testing class Daemon', () => {
 const gamePlay = new GamePlay();
 const gameCtrl = new GameController(gamePlay);
 gameCtrl.gameState = new GameState(1);
-gameCtrl.positions2 = [0, 1, 9];
-gameCtrl.positions1 = [6, 7, 14];
-gameCtrl.gameState.isPlayer1 = true;
+gameCtrl.pcPositions = [0, 1, 9];
+gameCtrl.playerPositions = [6, 7, 14];
+gameCtrl.gameState.isPlayer = true;
 
 test('testing daemon attack and move', () => {
   const daemon = new Daemon(1);
